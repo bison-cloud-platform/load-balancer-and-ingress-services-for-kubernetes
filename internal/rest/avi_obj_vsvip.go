@@ -107,6 +107,7 @@ func (rest *RestOperations) AviVsVipBuild(vsvip_meta *nodes.AviVSVIPNode, vsCach
 			// This would throw an error for advl4 the error is propagated to the gateway status.
 			if vsvip_meta.IPAddress != "" {
 				vip.IPAddress = &avimodels.IPAddr{Type: &ipType, Addr: &vsvip_meta.IPAddress}
+				vip.AutoAllocateIP = utils.BoolToPtr(false)
 			}
 
 			if lib.IsPublicCloud() && lib.GetCloudType() != lib.CLOUD_GCP {
