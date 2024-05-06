@@ -1,0 +1,36 @@
+name: Build and Push Tools Image
+on:
+  push:
+
+env:
+  TAG: "1.11.3-absa-static-ip"
+jobs:
+  build:
+    runs-on: arc-runner-set-absa
+    container:
+      image: artifacts.bcp.absa.co.za/gcr-io/kaniko-project/executor:debug
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare artifactory credentials
+        run: |
+          cat << EOF > /kaniko/.docker/config.json
+          {
+          	"auths": {
+          		"${{ env.ART_URL }}": {
+          			"username": "${{ secrets.JFROG_USERNAME }}",
+          			"password": "${{ secrets.JFROG_TOKEN }}"
+          		}
+          	}
+          }
+      - name: build and publish
+        env:
+          GIT_USERNAME: ${{ github.actor }}
+          GIT_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          ZSCALER: http://zproxycloud.intra.absaafrica:80
+        run: |
+          CONTEXT="${{ format('{0}#{1}#{2}', github.repositoryUrl, github.ref, github.sh) }}"
+          echo "Version is: ${{ needs.next_tag.outputs.new_tag }}"
+          /kaniko/executor --dockerfile="Dockerfile.ako" --context=$CONTEXT \
+             --destination="${{ env.ART_URL }}/bks-docker-local/ako:${{ env.TAG }}" ${{ env.KANIKO_CACHE_ARGS }} \
+             --build-arg='TARGETARCH=amd64' --custom-platform=linux/amd64 --push-retry 5 --image-fs-extract-retry 10 \
+             --build-arg=HTTPS_PROXY=${ZSCALER} --build-arg HTTP_PROXY=${ZSCALER}
